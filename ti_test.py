@@ -1,14 +1,14 @@
-import ti_sensortag
-import ble_utility
+import src.ti_sensortag as TI
+import src.ble_utility as BLEU
 
 import struct
 import time
+import logging
 
 
 def main():
-    print("Connecting to Tag 24:71:89:BC:1D:01")
-    tag = ble_utility.BLEDevice("24:71:89:BC:1D:01")
-    tag.add_service("temp", ti_sensortag.Temp(tag))
+    tag = BLEU.BLEDevice("24:71:89:BC:1D:01", True, logging.DEBUG)
+    tag.add_service("temp", TI.Temp(tag))
     tag.services["temp"].activate()
     period = struct.pack("B", 0x1E)  # This sets the Sensor to 300ms
     tag.services["temp"].set_probe_period(period)
@@ -17,7 +17,7 @@ def main():
 
     i = 1
     while True:
-        print("TempSensor: ", tag.services["temp"].read())
+        tag.services["temp"].log_value(tag.logger)
         if i > 4:
             break
         i += 1

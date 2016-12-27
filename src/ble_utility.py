@@ -1,7 +1,8 @@
+import bluepy.btle
+
 import struct
 import logging
-
-import bluepy.btle
+import os
 
 
 # Exception Classes
@@ -39,17 +40,20 @@ class BLELogger:
         if log:
             # Init Logger
             self.logger = logging.getLogger("ble_logger")
-            self.logger.setLevel(logging.WARNING)
+            self.logger.setLevel(logging.DEBUG)
 
             # Console Handler:
-            ch_handler = logging.StreamHandler
+            ch_handler = logging.StreamHandler()
             ch_handler.setLevel(ch_lvl)
             ch_format = logging.Formatter("%(levelname)s - %(message)s")
             ch_handler.setFormatter(ch_format)
             self.logger.addHandler(ch_handler)
 
             # File Handler
-            file_handler = logging.FileHandler("ble_utility.log", "w", "utf-8")
+            if not os.path.exists("log"):
+                os.makedirs("log")
+            file_handler = logging.FileHandler("log/ble_utility.log",
+                                               "w", "utf-8")
             file_handler.setLevel(file_lvl)
             file_format = logging.Formatter(
                 "%(asctime)s - %(levelname)s - %(message)s")
@@ -67,10 +71,12 @@ class BLEDevice(bluepy.btle.Peripheral):
                  file_lvl=logging.DEBUG):
         # Init Logger
         if log:
-            BLELogger(ch_lvl, file_lvl, log)
+            self.blelogger = BLELogger(ch_lvl, file_lvl, log)
+            self.logger = self.blelogger.logger
 
         # Init Device
-        logging.Debug("{msg}{mac}".format(msg="Connecting to ", mac=address))
+        self.logger.debug("{msg}{mac}".format(msg="Connecting to ",
+                                              mac=address))
         bluepy.btle.Peripheral.__init__(self, address)
         self.services = {}  # all registerd services should be in this list
 
@@ -102,7 +108,8 @@ class Service:
     on = struct.pack("B", 0x01)
     off = struct.pack("B", 0x00)
 
-    def __init__(self, periph, service_uuid, conf_uuid, data_uuid):
+    def __init__(self, periph, service_uuid, conf_uuid, data_uuid, service_id):
+        self.service_id = service_id
         self.periph = periph
         self.service = None
         self.config = None
@@ -143,3 +150,7 @@ class Service:
             self.additional_uuids[char_id] = uuid
         else:
             raise BLEServiceDuplicatedUUID(char_id)
+
+    def log_value(self, logger):
+        logger.info("{service}: {value}".format(service=self.service_id,
+                                                value=self.read()))

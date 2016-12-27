@@ -13,7 +13,7 @@ class Temp(ble_utility.Service):
         self.data_uuid = uuid.get_uuid(0xAA01)
         self.period_uuid = uuid.get_uuid(0xAA03)
         ble_utility.Service.__init__(self, periph, self.service_uuid,
-                                     self.config_uuid, self.data_uuid)
+                                     self.config_uuid, self.data_uuid, "temp")
         self.add_characteristics("period", self.period_uuid)
 
     def read(self):

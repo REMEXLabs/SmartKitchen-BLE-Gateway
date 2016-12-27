@@ -2,3 +2,5 @@
 .idea/
 *.py#
 /*.pyc
+*.pyc
+/log/ble_utility.log
