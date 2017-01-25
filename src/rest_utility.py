@@ -1,6 +1,8 @@
 import base64
+import json
 import logging
 import threading
+
 import requests
 
 import utils
@@ -8,10 +10,10 @@ import utils
 
 # This is designed for OpenHab
 # TODO: Refactor to work with arbitrary REST Server
-class OpenHabRestInterface:
+class OpenHabRestInterface(threading.Thread):
     prev_state = {}  # stores item states
 
-    def __init__(self, host, port, user, pwd):
+    def __init__(self, host, port, user, pwd, queue):
         self.host = host
         self.port = port
         self.user = user
@@ -26,9 +28,21 @@ class OpenHabRestInterface:
             "Authorization": "Basic %s" % self.auth,
             "Accept": "application/json"
         }  # Header for polling (returns json object)
-        self.logger = logging.getLogger(__name__).addHandler(
-            utils.NullHandler())  # NULL Logger if none is set
-        self.queue = threading.Semaphore({})
+        self.add_header = {
+            "Authorization": "Basic %s" % self.auth,
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+
+        # NULL Logger if none is set
+        self.logger = logging.getLogger("NULL")
+        self.logger.addHandler(logging.NullHandler())
+        self.logger.setLevel(logging.NOTSET)
+
+        threading.Thread.__init__(self)
+        self.queue = queue
+        self.queue_lock = threading.BoundedSemaphore()
+        self.logger.error("Bla")
 
     # If you want logging you can set the logger here
     def set_logger(self, logger_name):
@@ -38,25 +52,30 @@ class OpenHabRestInterface:
     def get_item_state(self, item):
         retval = requests.get("http://" + self.host + ":" + str(self.port) +
                               "/rest/items/" + item + "/state")
-        if retval.status_code != 200:
+        if retval.status_code != requests.codes.ok:
             self.logger.error("GET returned: %s" % retval.status_code)
             return None
         else:
-            value = retval.json()
+            value = retval.text
             self.prev_state[item] = value
-            self.logger.info(item + ": " + value)
+            self.logger.info(item + ": " + str(value))
             return value
 
     # Updates the state of the specified item
-    def update_item_state(self, item, state):
+    def update_item_state(self, item, state, no_update=False):
         openhab_url = "http://%s:%s/rest/items/%s/state" % (self.host,
                                                             self.port, item)
         retval = requests.put(openhab_url,
-                              data=state,
+                              data=str(state),
                               headers=self.basic_header)
 
-        if retval.status_code != requests.codes.ok:
+        if retval.status_code != requests.codes.accepted:
             self.logger.error("PUT returned : %s" % retval.status_code)
+            return False
+        #  Add to prev_state to prevent endless loops
+        if not no_update:
+            self.prev_state[item] = state
+        return True
 
     # Polls all Members of a Group and queues new values
     def poll_status(self, group):
@@ -67,7 +86,7 @@ class OpenHabRestInterface:
 
         if retval.status_code != requests.codes.ok:
             self.logger.error("GET returned: %s" % retval.status_code)
-            return
+            return False
 
         # Get all items in the group and check for new values
         for member in retval.json()["members"]:
@@ -75,19 +94,22 @@ class OpenHabRestInterface:
             state = member["state"]
             if item in self.prev_state:
                 if state != self.prev_state[item]:
-                    self.queue.acquire()  # Semaphore Lock
+                    with self.queue_lock:  # Lock Semaphore
+                        self.queue[item] = state
+            else:
+                with self.queue_lock:  # Lock Semaphore
                     self.queue[item] = state
-                    self.queue.release()
-                self.prev_state[item] = state
+            self.prev_state[item] = state
+
+        return True
 
     # Returns copy of current queue then clears queue
     def get_queue(self):
-        self.queue.acquire()
-        items = {}
-        for item, state in self.queue.iteritems():
-            items[item] = state
-        self.queue = {}
-        self.queue.release()
+        with self.queue_lock:
+            items = {}
+            for item, state in self.queue.iteritems():
+                items[item] = state
+            self.queue = {}
         return items
 
     # Add a new item to openHab
@@ -100,11 +122,12 @@ class OpenHabRestInterface:
             "category": category,
             "groupNames": [group]
         }
+        item_json = json.dumps(item)  # create json
 
         # Push new Item and return success/failure
         url = "http://%s:%s/rest/items/%s" % (self.host, self.port, name)
         for i in range(0, 2):  # Try 3 times if failure
-            retval = requests.put(url, data=item, headers=self.basic_header)
+            retval = requests.put(url, data=item_json, headers=self.add_header)
             if retval.status_code != requests.codes.ok:
                 if i == 2:
                     self.logger.error("PUT returned: %s" % retval.status_code)

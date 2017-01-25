@@ -11,12 +11,6 @@ class WrongLoggingLvl(Exception):
         return repr(self.value)
 
 
-# NULL Logger prints everything to void
-class NullHandler(logging.Handler):
-    def emit(self, record):
-        pass
-
-
 class Logger:
     # Possible Log Level
     log_lvls = {
@@ -28,7 +22,7 @@ class Logger:
         "NOTSET": 0
     }
 
-    def __init__(self, logger_name, file_name, ch_lvl=0, file_lvl=0):
+    def __init__(self, logger_name, file_name=None, ch_lvl=0, file_lvl=0):
         # Check logging lvl, throws if invalid
         self.check_logging_lvl(ch_lvl)
         self.check_logging_lvl(file_lvl)
@@ -44,14 +38,16 @@ class Logger:
         self.logger.addHandler(ch_handler)
 
         # File Handler
-        if not os.path.exists("log"):
-            os.makedirs("log")
-        file_handler = logging.FileHandler("log/" + file_name, "w", "utf-8")
-        file_handler.setLevel(file_lvl)
-        file_format = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s")
-        file_handler.setFormatter(file_format)
-        self.logger.addHandler(file_handler)
+        if file_name is not None:
+            if not os.path.exists("log"):
+                os.makedirs("log")
+            file_handler = logging.FileHandler("log/" + file_name, "w",
+                                               "utf-8")
+            file_handler.setLevel(file_lvl)
+            file_format = logging.Formatter(
+                "%(asctime)s - %(levelname)s - %(message)s")
+            file_handler.setFormatter(file_format)
+            self.logger.addHandler(file_handler)
 
     def __del__(self):
         logging.shutdown()  # Don't log after this call!
