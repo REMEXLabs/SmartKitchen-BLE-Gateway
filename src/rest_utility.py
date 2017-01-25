@@ -5,8 +5,6 @@ import threading
 
 import requests
 
-import utils
-
 
 # This is designed for OpenHab
 # TODO: Refactor to work with arbitrary REST Server
@@ -32,7 +30,7 @@ class OpenHabRestInterface(threading.Thread):
             "Authorization": "Basic %s" % self.auth,
             "Accept": "application/json",
             "Content-Type": "application/json"
-        }
+        }  # Header for adding items
 
         # NULL Logger if none is set
         self.logger = logging.getLogger("NULL")
@@ -42,7 +40,6 @@ class OpenHabRestInterface(threading.Thread):
         threading.Thread.__init__(self)
         self.queue = queue
         self.queue_lock = threading.BoundedSemaphore()
-        self.logger.error("Bla")
 
     # If you want logging you can set the logger here
     def set_logger(self, logger_name):

@@ -5,13 +5,12 @@ import unittest
 
 import src.ble_utility as BLEU
 import src.ti_sensortag as TI
-import src.utils as UTIL
 import src.rest_utility as REST
 
 
 class BLETest(unittest.TestCase):
     def ti_test(self):
-        tag = BLEU.BLEDevice("24:71:89:BC:1D:01", True, logging.DEBUG)
+        tag = BLEU.BLEDevice("24:71:89:BC:1D:01")
         tag.add_service("temp", TI.Temp(tag))
         tag.services["temp"].activate()
         period = struct.pack("B", 0x1E)  # This sets the Sensor to 300ms
