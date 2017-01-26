@@ -41,6 +41,7 @@ class BLEDevice(bluepy.btle.Peripheral):
         self.logger.debug("{msg}{mac}".format(
             msg="Connecting to ", mac=address))
         bluepy.btle.Peripheral.__init__(self, address)
+        self.discoverServices()
         self.services = {}  # all registerd services should be in this list
 
     def add_service(self, service_id, service):

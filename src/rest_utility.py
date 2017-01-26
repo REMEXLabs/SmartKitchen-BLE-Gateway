@@ -133,3 +133,13 @@ class OpenHabRestInterface(threading.Thread):
                 break
 
         return True
+
+    # Delete Item from openHab
+    def delete_item(self, name):
+        url = "http://%s:%s/rest/items/%s" % (self.host, self.port, name)
+        retval = requests.delete(url)
+        if retval.status_code != requests.codes.ok:
+            self.logger.error("DELETE returned: %s" % retval.status_code)
+            return False
+
+        return True
