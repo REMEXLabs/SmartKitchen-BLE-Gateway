@@ -9,7 +9,7 @@ import src.rest_utility as REST
 
 
 class BLETest(unittest.TestCase):
-    def ti_test(self):
+    def test_ti(self):
         tag = BLEU.BLEDevice("24:71:89:BC:1D:01")
         tag.add_service("temp", TI.Temp(tag))
         tag.services["temp"].activate()
@@ -75,4 +75,3 @@ class RESTTest(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    del (unittest_logger)
