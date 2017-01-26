@@ -1,6 +1,7 @@
 import base64
 import json
 import logging
+import time
 import threading
 
 import requests
@@ -10,6 +11,8 @@ import requests
 # TODO: Refactor to work with arbitrary REST Server
 class OpenHabRestInterface(threading.Thread):
     prev_state = {}  # stores item states
+    update = False
+    group = ""
 
     def __init__(self, host, port, user, pwd, queue):
         self.host = host
@@ -45,6 +48,9 @@ class OpenHabRestInterface(threading.Thread):
     def set_logger(self, logger_name):
         self.logger = logging.getLogger(logger_name)
 
+    def set_group(self, group):
+        self.group = group
+
     # Returns the state of the specified item
     def get_item_state(self, item):
         retval = requests.get("http://" + self.host + ":" + str(self.port) +
@@ -75,30 +81,32 @@ class OpenHabRestInterface(threading.Thread):
         return True
 
     # Polls all Members of a Group and queues new values
-    def poll_status(self, group):
-        url = "http://%s:%s/rest/items/%s" % (self.host, self.port, group)
+    def run(self):
+        self.update = True
+        url = "http://%s:%s/rest/items/%s" % (self.host, self.port, self.group)
         param = {"type": "json"}
 
-        retval = requests.get(url, params=param, headers=self.polling_header)
+        while self.update:
+            retval = requests.get(url, params=param, headers=self.polling_header)
 
-        if retval.status_code != requests.codes.ok:
-            self.logger.error("GET returned: %s" % retval.status_code)
-            return False
+            if retval.status_code != requests.codes.ok:
+                self.logger.error("GET returned: %s" % retval.status_code)
+                time.sleep(0.5)
+                continue
 
-        # Get all items in the group and check for new values
-        for member in retval.json()["members"]:
-            item = member["name"]
-            state = member["state"]
-            if item in self.prev_state:
-                if state != self.prev_state[item]:
+            # Get all items in the group and check for new values
+            for member in retval.json()["members"]:
+                item = member["name"]
+                state = member["state"]
+                if item in self.prev_state:
+                    if state != self.prev_state[item]:
+                        with self.queue_lock:  # Lock Semaphore
+                            self.queue[item] = state
+                else:
                     with self.queue_lock:  # Lock Semaphore
                         self.queue[item] = state
-            else:
-                with self.queue_lock:  # Lock Semaphore
-                    self.queue[item] = state
-            self.prev_state[item] = state
-
-        return True
+                        self.prev_state[item] = state
+            time.sleep(0.5)
 
     # Returns copy of current queue then clears queue
     def get_queue(self):
