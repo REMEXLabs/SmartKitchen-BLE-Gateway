@@ -3,6 +3,6 @@
 *.py#
 /*.pyc
 *.pyc
-/log/ble_utility.log
-/log/unittest
+/log/
+/log/
 *.log
