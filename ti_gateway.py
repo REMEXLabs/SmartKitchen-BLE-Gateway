@@ -1,16 +1,18 @@
 import threading
 import time
+import Queue
+import logging
 
 import src.ble_utility as BLEU
 import src.rest_utility as REST
 import src.ti_sensortag as TI
+import src.utils as UTIL
 
 
 class TIInterface(threading.Thread):
     prev_state = {}
-    update = False
 
-    def __init__(self, address, queue, timeout):
+    def __init__(self, address, queue, timeout, update):
         self.sensortag = BLEU.BLEDevice(address)
         self.sensortag.add_service("temperature", TI.Temp(self.sensortag))
         self.sensortag.add_service("humidity", TI.Humidity(self.sensortag))
@@ -18,21 +20,24 @@ class TIInterface(threading.Thread):
         for service in self.sensortag.services.itervalues():
             service.activate()
         self.update_queue = queue
-        self.queue_lock = threading.BoundedSemaphore()
         self.timeout = timeout
+        self.update = update
+        threading.Thread.__init__(self, target=self.get_current_values)
 
         # Give the Tag time to start data collection
         time.sleep(1.0)
 
         for s_id, service in self.sensortag.services.iteritems():
-            value = service.read()
+            value = str(service.read())
             self.prev_state[s_id] = value
-            with self.queue_lock:  # Write to queue for initialization
-                self.update_queue[s_id] = value
+            self.update_queue.put({s_id: value})
+
+    def set_logger(self, logger_name):
+        self.sensortag.set_logger(logger_name)
 
     def __del__(self):
         self.sensortag.disconnect()
-        del(self.sensortag)
+        del (self.sensortag)
 
     def get_service_ids(self):
         service_ids = []
@@ -43,94 +48,107 @@ class TIInterface(threading.Thread):
     def wait_for_notifications(self):
         self.sensortag.waitForNotifications(self.timeout)
 
-    def run(self):
+    def get_current_values(self):
         self.update = True
 
         while self.update:
             for s_id, service in self.sensortag.services.iteritems():
-                curr_value = service.read()
+                curr_value = str(service.read())
+                self.sensortag.logger.debug("Cur Value for %s: %s" %
+                                            (s_id, curr_value))
                 if self.prev_state[s_id] != curr_value:
-                    with self.queue_lock:
-                        self.update_queue[s_id] = curr_value
+                    self.update_queue.put({s_id: curr_value})
 
             self.wait_for_notifications()
-
-    def stop_update(self):
-        self.update = False
 
 
 class MainThread():
     prefix = "ble_imp_test"
-    switch_queue = {}
-    value_queue = {}
-    ble_queue = {}
-    queue_lock = threading.BoundedSemaphore()
+    switch_queue = Queue.Queue(1)
+    value_queue = Queue.Queue()
+    ble_queue = Queue.Queue(3)
+    update = True
 
     def __init__(self, instance_id):
+        UTIL.Logger("TI_Gateway", "ti_gateway.log", logging.DEBUG,
+                    logging.DEBUG)
+        self.logger = logging.getLogger("TI_Gateway")
+
         self.rest_switches = REST.OpenHabRestInterface(
-            "192.168.178.24", "8080", "pi", "raspberry", self.switch_queue)
-        self.rest_values = REST.OpenHabRestInterface("192.168.178.24", "8080",
-                                                     "pi", "raspberry", self.value_queue)
-        self.sensortag = TIInterface("24:71:89:BC:1D:01",
-                                     self.ble_queue, 1.0)
+            "192.168.178.24", "8080", "pi", "raspberry",
+            "%s_device_switch_group" % self.prefix, self.switch_queue)
+        self.rest_switches.daemon = True  # REST classes can be daemonized
+        self.rest_switches.set_logger("TI_Gateway")
+        self.rest_values = REST.OpenHabRestInterface(
+            "192.168.178.24", "8080", "pi", "raspberry", "%s_values_group",
+            self.value_queue)
+        self.rest_values.daemon = True  # REST classes can be daemonized
+        self.rest_values.set_logger("TI_Gateway")
+
+        self.sensortag = TIInterface("24:71:89:BC:1D:01", self.ble_queue, 1.0,
+                                     self.update)
+        self.sensortag.daemon = True
+        self.sensortag.set_logger("TI_Gateway")
+        self.sensortag.start()
 
         # Create Switch items
-        self.rest_switches.add_item("%s_device_switch_group" % self.prefix, "group",
-                                    "Group of Switches for %s" % self.prefix, "rest", "")
+        self.rest_switches.add_item("%s_device_switch_group" % self.prefix,
+                                    "Group", "Group of Switches for %s" %
+                                    self.prefix, "rest", "")
         self.rest_switches.add_item("%s_device_switch" % self.prefix, "Switch",
-                                    "Switch for %s" % self.prefix, "rest", "%s_device_switch_group" % self.prefix)
-        self.rest_switches.update_item_state(
-            "%s_device_switch" % self.prefix, "ON")
-        self.rest_switches.set_group("%s_device_switch_group" % self.prefix)
+                                    "Switch for %s" % self.prefix, "rest",
+                                    "%s_device_switch_group" % self.prefix)
+        self.rest_switches.update_item_state("%s_device_switch" % self.prefix,
+                                             "ON")
 
         self.rest_switches.start()
 
         # Create Value items
         self.rest_values.add_item("%s_values_group" % self.prefix, "Group",
-                                  "Group of Values for %s" % self.prefix, "rest", "")
+                                  "Group of Values for %s" % self.prefix,
+                                  "rest", "")
         for service_id in self.sensortag.get_service_ids():
-            self.rest_values.add_item("%s_%s" % (
-                self.prefix, service_id), "String", service_id, "rest", "%s_values" % self.prefix)
+            self.rest_values.add_item("%s_%s" % (self.prefix, service_id),
+                                      "String", service_id, "rest",
+                                      "%s_values" % self.prefix)
 
     def run(self):
-        # Start
-        self.sensortag.start()
+        while self.update:
+            time.sleep(0.2)
 
-        while True:
-            update_items = {}
-            switch_value = None
+            while True:
+                try:
+                    item = self.switch_queue.get(True, 0.5)
+                    self.switch_queue.task_done()
+                    key, value = item.popitem()
+                    if value == "OFF":
+                        self.update = False
+                        break
+                except:
+                    break
 
-            with self.queue_lock:
-                for item, value in self.switch_queue:
-                    if item == "%s_device_switch" % self.prefix:
-                        switch_value = value
-                    self.switch_queue = {}
-
-            if switch_value == "OFF":
-                break
-
-            with self.queue_lock:
-                for item, value in self.ble_queue.iteritems():
-                    update_items[item] = value
-                self.ble_queue = {}
-
-            for item, value in update_items:
-                self.rest_values.update_item_state(item, state)
+            while True:
+                try:
+                    item = self.ble_queue.get(True, 0.5)
+                    key, value = item.popitem()
+                    self.rest_values.update_item_state("%s_%s" % (self.prefix,
+                                                                  key),
+                                                       str(value))
+                    self.logger.debug("New State of %s: %s" %
+                                      (str(key), str(value)))
+                    self.ble_queue.task_done()
+                except:
+                    break
 
         # Clean Up
-        # Stop BLE
-        self.sensortag.stop_update()
-        self.sensortag.__del__()
-        self.sensortag.join()
+        self.logger.debug("Cleaning Up")
 
         # Set Values to NULL
-        for service_id in self.sensortag.get_service_ids:
-            self.rest_values.update_item_state(service_id, "NULL")
-        self.rest_values.join()
+        for service_id in self.sensortag.get_service_ids():
+            self.rest_values.update_item_state("%s_%s" % (self.prefix,
+                                                          service_id), "--")
 
-        # Stop switch updates
-        self.rest_switches.stop_update()
-        self.rest_switches.join()
+        self.sensortag.__del__()  # Stop Sensortag
 
 
 if __name__ == "__main__":

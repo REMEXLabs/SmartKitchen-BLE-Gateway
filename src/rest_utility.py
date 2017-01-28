@@ -46,9 +46,6 @@ class OpenHabRestInterface(threading.Thread):
     def set_logger(self, logger_name):
         self.logger = logging.getLogger(logger_name)
 
-    def set_group(self, group):
-        self.group = group
-
     # Returns the state of the specified item
     def get_item_state(self, item):
         retval = requests.get("http://" + self.host + ":" + str(self.port) +
@@ -71,7 +68,8 @@ class OpenHabRestInterface(threading.Thread):
                               headers=self.basic_header)
 
         if retval.status_code != requests.codes.accepted:
-            self.logger.error("PUT returned : %s" % retval.status_code)
+            self.logger.error("PUT returned : %s for item: %s" %
+                              (retval.status_code, item))
             return False
         #  Add to prev_state to prevent endless loops
         if not no_update:
@@ -91,7 +89,8 @@ class OpenHabRestInterface(threading.Thread):
                                   headers=self.polling_header)
 
             if retval.status_code != requests.codes.ok:
-                self.logger.error("GET returned: %s" % retval.status_code)
+                self.logger.error("GET returned: %s for Group:%s" %
+                                  (retval.status_code, group))
                 time.sleep(0.5)
                 continue
 
@@ -101,6 +100,8 @@ class OpenHabRestInterface(threading.Thread):
                 state = member["state"]
                 if item in self.prev_state:
                     if state != self.prev_state[item]:
+                        self.logger.debug("New State of %s: %s" %
+                                          (item, state))
                         queue.put({item: state})
                 else:
                     queue.put({item: state})

@@ -20,9 +20,8 @@ class Temp(ble_utility.Service):
 
     def read(self):
         data = struct.unpack("<hh", self.data.read())
-        t = (data[0] >> 2) * self.scaling
         ambt = (data[1] >> 2) * self.scaling
-        return (t, ambt)
+        return "%.1f" % ambt
 
     def set_probe_period(self, period):
         self.additional_characteristics["period"].write(period)
@@ -43,9 +42,8 @@ class Humidity(ble_utility.Service):
 
     def read(self):
         data = struct.unpack("<HH", self.data.read())
-        temp = -40.0 + 165.0 * (data[0] / 65536.0)
         humidity = 100.0 * (data[1] / 65536.0)
-        return (temp, humidity)
+        return "%.1f" % humidity
 
     def set_probe_period(self, period):
         self.additional_characteristics["period"].write(period)
@@ -67,9 +65,8 @@ class Barometer(ble_utility.Service):
 
     def read(self):
         data = struct.unpack("<BBBBBB", self.data.read())
-        temp = (data[0] + data[1] * 256 + data[2] * 65536) / 100
         pressure = (data[3] + data[4] * 256 + data[5] * 65536) / 100
-        return (temp, pressure)
+        return "%.0f" % pressure
 
     def set_probe_period(self, period):
         self.additional_characteristics["period"].write(period)
