@@ -12,9 +12,8 @@ import requests
 class OpenHabRestInterface(threading.Thread):
     prev_state = {}  # stores item states
     update = False
-    group = ""
 
-    def __init__(self, host, port, user, pwd, queue):
+    def __init__(self, host, port, user, pwd, group, queue):
         self.host = host
         self.port = port
         self.user = user
@@ -39,10 +38,9 @@ class OpenHabRestInterface(threading.Thread):
         self.logger = logging.getLogger("NULL")
         self.logger.addHandler(logging.NullHandler())
         self.logger.setLevel(logging.NOTSET)
-
-        threading.Thread.__init__(self)
-        self.queue = queue
-        self.queue_lock = threading.BoundedSemaphore()
+        self.args = (group, queue)
+        threading.Thread.__init__(
+            self, target=self.poll_status, args=self.args)
 
     # If you want logging you can set the logger here
     def set_logger(self, logger_name):
@@ -81,13 +79,16 @@ class OpenHabRestInterface(threading.Thread):
         return True
 
     # Polls all Members of a Group and queues new values
-    def run(self):
+    def poll_status(self, group, queue):
         self.update = True
-        url = "http://%s:%s/rest/items/%s" % (self.host, self.port, self.group)
+        url = "http://%s:%s/rest/items/%s" % (self.host, self.port, group)
         param = {"type": "json"}
 
         while self.update:
-            retval = requests.get(url, params=param, headers=self.polling_header)
+            queue.join()  # Wait until queue is empty
+            retval = requests.get(url,
+                                  params=param,
+                                  headers=self.polling_header)
 
             if retval.status_code != requests.codes.ok:
                 self.logger.error("GET returned: %s" % retval.status_code)
@@ -100,22 +101,11 @@ class OpenHabRestInterface(threading.Thread):
                 state = member["state"]
                 if item in self.prev_state:
                     if state != self.prev_state[item]:
-                        with self.queue_lock:  # Lock Semaphore
-                            self.queue[item] = state
+                        queue.put({item: state})
                 else:
-                    with self.queue_lock:  # Lock Semaphore
-                        self.queue[item] = state
-                        self.prev_state[item] = state
+                    queue.put({item: state})
+                    self.prev_state[item] = state
             time.sleep(0.5)
-
-    # Returns copy of current queue then clears queue
-    def get_queue(self):
-        with self.queue_lock:
-            items = {}
-            for item, state in self.queue.iteritems():
-                items[item] = state
-            self.queue = {}
-        return items
 
     # Add a new item to openHab
     def add_item(self, name, item_type, label, category, group):

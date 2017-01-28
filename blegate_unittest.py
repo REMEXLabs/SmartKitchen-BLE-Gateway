@@ -1,9 +1,7 @@
-import logging
+import Queue
 import struct
 import time
 import unittest
-
-import bluepy
 
 import src.ble_utility as BLEU
 import src.rest_utility as REST
@@ -11,7 +9,6 @@ import src.ti_sensortag as TI
 
 
 class BLETest(unittest.TestCase):
-
     def test_ti(self):
         tag = BLEU.BLEDevice("24:71:89:BC:1D:01")
         tag.add_service("temp", TI.Temp(tag))
@@ -34,11 +31,12 @@ class BLETest(unittest.TestCase):
 
 
 class RESTTest(unittest.TestCase):
-    update_queue = {}
+    update_queue = Queue.Queue(1)
     # Use default values for openHabianpi, change values if necessary
     rest_interface = REST.OpenHabRestInterface("192.168.178.24", "8080", "pi",
-                                               "raspberry", update_queue)
-    rest_interface.start()
+                                               "raspberry", "rest_group",
+                                               update_queue)
+    rest_interface.daemon = True  # Daemonize the Thread
 
     def test_update_get(self):
         # Update and Get Item Test
@@ -52,14 +50,16 @@ class RESTTest(unittest.TestCase):
         # Prevent updates so poll_status gets a queue
         self.assertTrue(
             self.rest_interface.update_item_state("rest_test", "0", True))
+        self.rest_interface.start()
         for i in range(1, 20):
-            self.assertTrue(self.rest_interface.poll_status("rest_group"))
-            items = self.rest_interface.get_queue()
-            self.assertEqual(len(items), 1)
+            items = self.update_queue.get()
             self.assertTrue(("rest_test") in items.keys())
             self.assertEqual(items["rest_test"], str(i - 1))
             self.assertTrue(
                 self.rest_interface.update_item_state("rest_test", i))
+            self.update_queue.task_done()
+        self.rest_interface.update = False
+        print(str(self.rest_interface.update))
 
     def test_item_create(self):
         self.assertTrue(
@@ -74,12 +74,11 @@ class RESTTest(unittest.TestCase):
             "test_1337_test")
 
     def test_item_delete(self):
-        self.assertTrue(self.rest_interface.add_item(
-            "unittest_rest", "String", "", "rest", "rest_group"))
+        self.assertTrue(
+            self.rest_interface.add_item("unittest_rest", "String", "", "rest",
+                                         "rest_group"))
         self.assertTrue(self.rest_interface.delete_item("unittest_rest"))
         self.assertFalse(self.rest_interface.get_item_state("unittest_rest"))
-
-    rest_interface.join()
 
 
 if __name__ == '__main__':
