@@ -18,12 +18,8 @@ class BLETest(unittest.TestCase):
 
         time.sleep(1.0)
 
-        i = 1
-        while True:
-            tag.services["temp"].log_value(tag.logger)
-            if i > 4:
-                break
-            i += 1
+        for i in range(0, 4):
+            self.assertTrue(tag.services["temp"].read() is not None)
             tag.waitForNotifications(1.0)
 
         tag.disconnect()
