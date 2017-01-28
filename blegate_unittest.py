@@ -59,7 +59,6 @@ class RESTTest(unittest.TestCase):
                 self.rest_interface.update_item_state("rest_test", i))
             self.update_queue.task_done()
         self.rest_interface.update = False
-        print(str(self.rest_interface.update))
 
     def test_item_create(self):
         self.assertTrue(
