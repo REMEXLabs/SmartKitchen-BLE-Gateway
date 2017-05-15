@@ -119,16 +119,6 @@ class OpenHabRestInterface(threading.Thread):
             "groupNames": [group]
         }
 
-        ''' item  =  {
-            "link": "http://192.168.178.20:8080/rest/items/Lampe_3",
-            "state": "NULL",
-            "type": "Dimmer",
-            "name": "MyDimmer5",
-            "label": "M5555_dyimmer",
-            "tags": [],
-            "groupNames": []
-        } '''
-
         item_json = json.dumps(item)  # create json
        # item_json = json.dumps(list(item))  # create json
         print "item %s" % item_json
