@@ -118,8 +118,20 @@ class OpenHabRestInterface(threading.Thread):
             "category": category,
             "groupNames": [group]
         }
-        item_json = json.dumps(item)  # create json
 
+        ''' item  =  {
+            "link": "http://192.168.178.20:8080/rest/items/Lampe_3",
+            "state": "NULL",
+            "type": "Dimmer",
+            "name": "MyDimmer5",
+            "label": "M5555_dyimmer",
+            "tags": [],
+            "groupNames": []
+        } '''
+
+        item_json = json.dumps(item)  # create json
+       # item_json = json.dumps(list(item))  # create json
+        print "item %s" % item_json
         # Push new Item and return success/failure
         url = "http://%s:%s/rest/items/%s" % (self.host, self.port, name)
         for i in range(0, 2):  # Try 3 times if failure

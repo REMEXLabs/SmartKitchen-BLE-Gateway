@@ -29,7 +29,7 @@ class BLETest(unittest.TestCase):
 class RESTTest(unittest.TestCase):
     update_queue = Queue.Queue(1)
     # Use default values for openHabianpi, change values if necessary
-    rest_interface = REST.OpenHabRestInterface("192.168.178.24", "8080", "pi",
+    rest_interface = REST.OpenHabRestInterface("192.168.178.20", "8080", "pi",
                                                "raspberry", "rest_group",
                                                update_queue)
     rest_interface.daemon = True  # Daemonize the Thread

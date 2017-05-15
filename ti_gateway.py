@@ -17,8 +17,11 @@ class TIInterface(threading.Thread):
         self.sensortag.add_service("temperature", TI.Temp(self.sensortag))
         self.sensortag.add_service("humidity", TI.Humidity(self.sensortag))
         self.sensortag.add_service("barometer", TI.Barometer(self.sensortag))
-        for service in self.sensortag.services.itervalues():
-            service.activate()
+        #for service in self.sensortag.services.itervalues():
+        self.keys = self.sensortag.services.keys()
+        print "keys : %s" % self.keys
+        for key in self.keys:
+            self.sensortag.services[key].activate()
         self.update_queue = queue
         self.timeout = timeout
         self.update = update
@@ -27,10 +30,16 @@ class TIInterface(threading.Thread):
         # Give the Tag time to start data collection
         time.sleep(1.0)
 
-        for s_id, service in self.sensortag.services.iteritems():
+        for key in self.keys:
+           value = str(self.sensortag.services[key].read())
+           print "Service with value : %s %s" % (key, value)
+           self.prev_state[key] = value
+           self.update_queue.put({key: value})
+
+        '''for s_id, service in self.sensortag.services.iteritems():
             value = str(service.read())
             self.prev_state[s_id] = value
-            self.update_queue.put({s_id: value})
+            self.update_queue.put({s_id: value})'''
 
     def set_logger(self, logger_name):
         self.sensortag.set_logger(logger_name)
@@ -40,6 +49,7 @@ class TIInterface(threading.Thread):
         del (self.sensortag)
 
     def get_service_ids(self):
+        return self.keys #Returning the keys
         service_ids = []
         for s_id in self.sensortag.services.iterkeys():
             service_ids.append(s_id)
@@ -52,12 +62,23 @@ class TIInterface(threading.Thread):
         self.update = True
 
         while self.update:
-            for s_id, service in self.sensortag.services.iteritems():
+           # keys = self.sensortag.services.keys()
+            print "keys : %s" % self.keys
+            for key in self.keys:
+                cur_value = str(self.sensortag.services[key].read())
+                print "Service with value : %s %s" % (key, cur_value)
+                self.sensortag.logger.debug("Cur Value for %s: %s" % (key, cur_value))
+                if self.prev_state[key] != cur_value:
+                    self.update_queue.put({key: cur_value})
+                self.prev_state[key] = cur_value
+                self.update_queue.put({key: cur_value})
+
+            '''for s_id, service in self.sensortag.services.iteritems():
                 curr_value = str(service.read())
                 self.sensortag.logger.debug("Cur Value for %s: %s" %
                                             (s_id, curr_value))
                 if self.prev_state[s_id] != curr_value:
-                    self.update_queue.put({s_id: curr_value})
+                    self.update_queue.put({s_id: curr_value})'''
 
             self.wait_for_notifications()
 
@@ -75,12 +96,12 @@ class MainThread():
         self.logger = logging.getLogger("TI_Gateway")
 
         self.rest_switches = REST.OpenHabRestInterface(
-            "192.168.178.24", "8080", "pi", "raspberry",
+            "192.168.178.20", "8080", "pi", "raspberry",
             "%s_device_switch_group" % self.prefix, self.switch_queue)
         self.rest_switches.daemon = True  # REST classes can be daemonized
         self.rest_switches.set_logger("TI_Gateway")
         self.rest_values = REST.OpenHabRestInterface(
-            "192.168.178.24", "8080", "pi", "raspberry", "%s_values_group",
+            "192.168.178.20", "8080", "pi", "raspberry", "%s_values_group",
             self.value_queue)
         self.rest_values.daemon = True  # REST classes can be daemonized
         self.rest_values.set_logger("TI_Gateway")
@@ -108,6 +129,7 @@ class MainThread():
                                   "Group of Values for %s" % self.prefix,
                                   "rest", "")
         for service_id in self.sensortag.get_service_ids():
+            print "Cur service_id is %s: " % service_id
             self.rest_values.add_item("%s_%s" % (self.prefix, service_id),
                                       "String", service_id, "rest",
                                       "%s_values" % self.prefix)
