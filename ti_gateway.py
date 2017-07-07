@@ -8,11 +8,11 @@ import src.rest_utility as REST
 import src.ti_sensortag as TI
 import src.utils as UTIL
 
-
 class TIInterface(threading.Thread):
     prev_state = {}
 
     def __init__(self, address, queue, timeout, update):
+
         self.sensortag = BLEU.BLEDevice(address)
         self.sensortag.add_service("temperature", TI.Temp(self.sensortag))
         self.sensortag.add_service("humidity", TI.Humidity(self.sensortag))
@@ -35,6 +35,7 @@ class TIInterface(threading.Thread):
            print "Service with value : %s %s" % (key, value)
            self.prev_state[key] = value
            self.update_queue.put({key: value})
+
 
         '''for s_id, service in self.sensortag.services.iteritems():
             value = str(service.read())
@@ -84,6 +85,7 @@ class TIInterface(threading.Thread):
 
 
 class MainThread():
+
     prefix = "ble_imp_test"
     switch_queue = Queue.Queue(1)
     value_queue = Queue.Queue()
@@ -91,20 +93,21 @@ class MainThread():
     update = True
 
     def __init__(self, instance_id):
+
         UTIL.Logger("TI_Gateway", "ti_gateway.log", logging.DEBUG,
                     logging.DEBUG)
         self.logger = logging.getLogger("TI_Gateway")
 
-        self.rest_switches = REST.OpenHabRestInterface(
-            "192.168.178.20", "8080", "pi", "raspberry",
-            "%s_device_switch_group" % self.prefix, self.switch_queue)
-        self.rest_switches.daemon = True  # REST classes can be daemonized
-        self.rest_switches.set_logger("TI_Gateway")
-        self.rest_values = REST.OpenHabRestInterface(
-            "192.168.178.20", "8080", "pi", "raspberry", "%s_values_group",
-            self.value_queue)
-        self.rest_values.daemon = True  # REST classes can be daemonized
-        self.rest_values.set_logger("TI_Gateway")
+        '''self.rest_switches = REST.OpenHabRestInterface(
+                "192.168.178.20", "8080", "pi", "raspberry",
+                "%s_device_switch_group" % self.prefix, self.switch_queue)
+            self.rest_switches.daemon = True  # REST classes can be daemonized
+            self.rest_switches.set_logger("TI_Gateway")
+            self.rest_values = REST.OpenHabRestInterface(
+                "192.168.178.20", "8080", "pi", "raspberry", "%s_values_group",
+                self.value_queue)
+            self.rest_values.daemon = True  # REST classes can be daemonized
+            self.rest_values.set_logger("TI_Gateway")'''
 
         self.sensortag = TIInterface("24:71:89:BC:1D:01", self.ble_queue, 1.0,
                                      self.update)
@@ -113,26 +116,26 @@ class MainThread():
         self.sensortag.start()
 
         # Create Switch items
-        self.rest_switches.add_item("%s_device_switch_group" % self.prefix,
+        '''self.rest_switches.add_item("%s_device_switch_group" % self.prefix,
                                     "Group", "Group of Switches for %s" %
                                     self.prefix, "rest", "")
         self.rest_switches.add_item("%s_device_switch" % self.prefix, "Switch",
                                     "Switch for %s" % self.prefix, "rest",
                                     "%s_device_switch_group" % self.prefix)
-        self.rest_switches.update_item_state("%s_device_switch" % self.prefix,
+       self.rest_switches.update_item_state("%s_device_switch" % self.prefix,
                                              "ON")
 
-        self.rest_switches.start()
+        self.rest_switches.start() '''
 
         # Create Value items
-        self.rest_values.add_item("%s_values_group" % self.prefix, "Group",
+        '''self.rest_values.add_item("%s_values_group" % self.prefix, "Group",
                                   "Group of Values for %s" % self.prefix,
                                   "rest", "")
         for service_id in self.sensortag.get_service_ids():
             print "Cur service_id is %s: " % service_id
             self.rest_values.add_item("%s_%s" % (self.prefix, service_id),
                                       "String", service_id, "rest",
-                                      "%s_values" % self.prefix)
+                                      "%s_values" % self.prefix)'''
 
     def run(self):
         while self.update:
