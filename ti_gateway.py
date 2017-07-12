@@ -11,7 +11,7 @@ import src.utils as UTIL
 class TIInterface(threading.Thread):
     prev_state = {}
 
-    def __init__(self, address, queue, timeout, update):
+    def __init__(self, address, queue, timeout, update, ble_dict):
 
         self.sensortag = BLEU.BLEDevice(address)
         self.sensortag.add_service("temperature", TI.Temp(self.sensortag))
@@ -23,6 +23,7 @@ class TIInterface(threading.Thread):
         for key in self.keys:
             self.sensortag.services[key].activate()
         self.update_queue = queue
+        self.ble_dict = ble_dict
         self.timeout = timeout
         self.update = update
         threading.Thread.__init__(self, target=self.get_current_values)
@@ -35,7 +36,7 @@ class TIInterface(threading.Thread):
            print "Service with value : %s %s" % (key, value)
            self.prev_state[key] = value
            self.update_queue.put({key: value})
-
+           ble_dict[key] = value
 
         '''for s_id, service in self.sensortag.services.iteritems():
             value = str(service.read())
@@ -71,8 +72,10 @@ class TIInterface(threading.Thread):
                 self.sensortag.logger.debug("Cur Value for %s: %s" % (key, cur_value))
                 if self.prev_state[key] != cur_value:
                     self.update_queue.put({key: cur_value})
+                    self.ble_dict[key] = cur_value
                 self.prev_state[key] = cur_value
                 self.update_queue.put({key: cur_value})
+                self.ble_dict[key] = cur_value
 
             '''for s_id, service in self.sensortag.services.iteritems():
                 curr_value = str(service.read())
