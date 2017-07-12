@@ -7,9 +7,7 @@ import time
 import Queue
 import logging
 import threading
-import src.ble_utility as BLEU
-import src.rest_utility as REST
-import src.ti_sensortag as TI
+from urlparse import urlparse, parse_qs
 import src.utils as UTIL
 
 # The servers' port number.
@@ -50,24 +48,32 @@ class requestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         # f = furl(self.path)
         # print f.args['yolo']
-        parsed = urlparse.urlparse(self.path)
-        # print parsed.query
+       # parsed = urlparse.urlparse(self.path)
         # print urlparse.parse_qs(parsed.query)
-        parsed_query = urlparse.parse_qs(parsed.query)
-
-        if  parsed_query: # check if param attribute is NOT empty
-            for para in parsed_query:
-                value = parsed_query[para]
-                print "para '" + para + "' has the value: " + str(value)
-                print ble_dict["temperature"]
+        query_components = parse_qs(urlparse(self.path).query)
+        #parsed_query = urlparse.parse_qs(parsed.query)
+        if  query_components: # check if param attribute is NOT empty
+            print query_components
+            whichData = query_components['sensorData'][0]
+            print whichData
             self.send_response(200)
             self.send_header('Content-type', 'text/html')
             self.end_headers()
-        # Send the html message
             self.wfile.write("Hello: </p>")
-            self.wfile.write("Temperatur ist: " + ble_dict["temperature"] + " Grad Celsius </p>")
-            self.wfile.write("Luftfeuchtigkeit ist: " + ble_dict["humidity"] + "% </p>")
-            self.wfile.write("Luftdruck ist: "  + ble_dict["barometer"] + "Pa </p>")
+           # print "para '" + parsed_query + "' has the value: " + str(value)
+            if(whichData == "all"):
+                self.wfile.write("Temperatur ist: " + ble_dict["temperature"] + " Grad Celsius </p>")
+                self.wfile.write("Luftfeuchtigkeit ist: " + ble_dict["humidity"] + "% </p>")
+                self.wfile.write("Luftdruck ist: " + ble_dict["barometer"] + "Pa </p>")
+        # Send the html message
+            elif (whichData == "temprature"):
+                self.wfile.write("Temperatur ist: " + ble_dict["temperature"] + " Grad Celsius </p>")
+            elif (whichData == "humidity"):
+                self.wfile.write("Luftfeuchtigkeit ist: " + ble_dict["humidity"] + "% </p>")
+            elif (whichData == "barometer"):
+                self.wfile.write("Luftdruck ist: " + ble_dict["barometer"] + "Pa </p>")
+            else:
+                self.wfile.write("No valid parameter")
         return
 
 
