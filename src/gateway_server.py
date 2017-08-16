@@ -8,6 +8,7 @@ import Queue
 import logging
 import threading
 from urlparse import urlparse, parse_qs
+import urllib
 import src.utils as UTIL
 
 # The servers' port number.
@@ -48,18 +49,20 @@ class requestHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         # f = furl(self.path)
         # print f.args['yolo']
+        print "+++++++ Request empfangen QUTE" + " " + self.path + " -----> "
+
+        print "+++++++ Request empfangen " + " " +  urllib.unquote(self.path) + " -----> "
        # parsed = urlparse.urlparse(self.path)
         # print urlparse.parse_qs(parsed.query)
-        query_components = parse_qs(urlparse(self.path).query)
+        query_components = parse_qs(urlparse(urllib.unquote(self.path)).query)
         #parsed_query = urlparse.parse_qs(parsed.query)
         if  query_components: # check if param attribute is NOT empty
             print query_components
             whichData = query_components['sensorData'][0]
             print whichData
             self.send_response(200)
-            self.send_header('Content-type', 'text/html')
+            self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write("Hello: </p>")
            # print "para '" + parsed_query + "' has the value: " + str(value)
             if(whichData == "all"):
                 self.wfile.write("Temperatur ist: " + ble_dict["temperature"] + " Grad Celsius </p>")
@@ -72,8 +75,12 @@ class requestHandler(BaseHTTPRequestHandler):
                 self.wfile.write("Luftfeuchtigkeit ist: " + ble_dict["humidity"] + "% </p>")
             elif (whichData == "barometer"):
                 self.wfile.write("Luftdruck ist: " + ble_dict["barometer"] + "Pa </p>")
+            elif (whichData == "temp"):
+                self.wfile.write(ble_dict["temperature"])
             else:
                 self.wfile.write("No valid parameter")
+
+            self.wfile.close()
         return
 
 
