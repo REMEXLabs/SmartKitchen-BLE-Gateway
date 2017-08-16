@@ -61,7 +61,7 @@ class requestHandler(BaseHTTPRequestHandler):
             whichData = query_components['sensorData'][0]
             print whichData
             self.send_response(200)
-            self.send_header('Content-type', 'text/plain')
+            self.send_header('Content-type', 'application/json')
             self.end_headers()
            # print "para '" + parsed_query + "' has the value: " + str(value)
             if(whichData == "all"):
@@ -77,6 +77,14 @@ class requestHandler(BaseHTTPRequestHandler):
                 self.wfile.write("Luftdruck ist: " + ble_dict["barometer"] + "Pa </p>")
             elif (whichData == "temp"):
                 self.wfile.write(ble_dict["temperature"])
+            elif(whichData == "allSensors"):
+                self.wfile.write("{" +
+                                    "\"sensorData\": {"+
+                                        "\"temprature\":"+ "\"" + ble_dict["temperature"] + "\","+
+                                        "\"humidity\":"+ "\"" + ble_dict["humidity"] + "\","+
+                                        "\"pressure\":"+ "\"" + ble_dict["barometer"] + "\""+
+                                        "}"
+                                 '}')
             else:
                 self.wfile.write("No valid parameter")
 
