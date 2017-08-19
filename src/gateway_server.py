@@ -44,58 +44,54 @@ class http_server:
 
 # This class will handles any incoming request from
 # the browser
-class requestHandler(BaseHTTPRequestHandler):
+class RequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
-        # f = furl(self.path)
-        # print f.args['yolo']
-        print "+++++++ Request empfangen QUTE" + " " + self.path + " -----> "
+        print "+++++++ incoming request --->  " + self.path
+       # test = parse_qs(urlparse(self.path).query)
+      #  akku = test['data']
+        # print "akku  = " + akku
+        # unquoting the query
+        unquoted_query_components = parse_qs(urlparse(urllib.unquote(self.path)).query)
+        if unquoted_query_components:
+            if unquoted_query_components['data']:
+                print "unquoted_query_components['data'][0] = " + unquoted_query_components['data'][0]
+                self.handel_get_data_request(unquoted_query_components)
+        # elif unquoted_query_components['action']:
+        #    self.handel_action_request(unquoted_query_components)
+        return
 
-        print "+++++++ Request empfangen " + " " +  urllib.unquote(self.path) + " -----> "
-       # parsed = urlparse.urlparse(self.path)
-        # print urlparse.parse_qs(parsed.query)
-        query_components = parse_qs(urlparse(urllib.unquote(self.path)).query)
-        #parsed_query = urlparse.parse_qs(parsed.query)
-        if  query_components: # check if param attribute is NOT empty
-            print query_components
-            whichData = query_components['sensorData'][0]
-            print whichData
+    def handel_get_data_request(self, unquoted_query_components):
+        _sensor_data_query = unquoted_query_components['data'][0]
+        print _sensor_data_query
+        if _sensor_data_query == "all":
             self.send_response(200)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-           # print "para '" + parsed_query + "' has the value: " + str(value)
-            if(whichData == "all"):
-                self.wfile.write("Temperatur ist: " + ble_dict["temperature"] + " Grad Celsius </p>")
-                self.wfile.write("Luftfeuchtigkeit ist: " + ble_dict["humidity"] + "% </p>")
-                self.wfile.write("Luftdruck ist: " + ble_dict["barometer"] + "Pa </p>")
-        # Send the html message
-            elif (whichData == "temprature"):
-                self.wfile.write("Temperatur ist: " + ble_dict["temperature"] + " Grad Celsius </p>")
-            elif (whichData == "humidity"):
-                self.wfile.write("Luftfeuchtigkeit ist: " + ble_dict["humidity"] + "% </p>")
-            elif (whichData == "barometer"):
-                self.wfile.write("Luftdruck ist: " + ble_dict["barometer"] + "Pa </p>")
-            elif (whichData == "temp"):
-                self.wfile.write(ble_dict["temperature"])
-            elif(whichData == "allSensors"):
-                self.wfile.write("{" +
-                                    "\"sensorData\": {"+
-                                        "\"temprature\":"+ "\"" + ble_dict["temperature"] + "\","+
-                                        "\"humidity\":"+ "\"" + ble_dict["humidity"] + "\","+
-                                        "\"pressure\":"+ "\"" + ble_dict["barometer"] + "\""+
-                                        "}"
-                                 '}')
-            else:
-                self.wfile.write("No valid parameter")
-
+            # TODO: Refactor this part with proper JSON lib.
+            self.wfile.write("{" +
+                             "\"sensorData\": {" +
+                             "\"temprature\":" + "\"" + ble_dict["temperature"] + "\"," +
+                             "\"humidity\":" + "\"" + ble_dict["humidity"] + "\"," +
+                             "\"pressure\":" + "\"" + ble_dict["barometer"] + "\"" +
+                             "}"
+                             '}')
             self.wfile.close()
+        else:
+            self.send_response(200)
+            self.send_header('Content-type', 'plain/text')
+            self.end_headers()
+            self.wfile.write("no valid parameter")
+            self.wfile.close()
+        return
+
+    def handel_action_request(self, action):
         return
 
 
 class BLE_Thread():
 
     prefix = "ble_imp_test"
-
     update = True
 
     def __init__(self, instance_id):
@@ -154,7 +150,7 @@ class BLE_Thread():
 
 class main:
     def __init__(self):
-        server = http_server(8080, requestHandler)
+        server = http_server(8080, RequestHandler)
         server.run()
 
 if __name__ == '__main__':
