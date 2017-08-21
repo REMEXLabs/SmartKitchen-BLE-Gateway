@@ -3,16 +3,38 @@ import ble_utility
 import struct
 
 
+class Battery(ble_utility.Service):
+
+    def __init__(self, periph):
+        uuid_generator = ble_utility.UUID()
+
+        self.service_uuid = uuid_generator.get_uuid(0x180F)
+        self.config_uuid = None
+        self.data_uuid = uuid_generator.get_uuid(0x2A19)
+        self.period_uuid = None
+        self.on = None
+
+        ble_utility.Service.__init__(self, periph, uuid_generator, self.service_uuid,
+                                 self.config_uuid,
+                                 self.data_uuid, "battery")
+
+    def read(self):
+        # returns the battery level in percent
+        val = ord(self.data.read())
+        return val
+
+
 class Temp(ble_utility.Service):
     scaling = 0.03125
 
     def __init__(self, periph):
-        uuid_generator = ble_utility.UUID("%08X-0451-4000-b000-000000000000",
-                                          0xF0000000)
-        self.service_uuid = 0xAA00
-        self.config_uuid = 0xAA02
-        self.data_uuid = 0xAA01
-        self.period_uuid = 0xAA03
+        uuid_generator = ble_utility.TI_UUID()
+
+        self.service_uuid = uuid_generator.get_uuid(0xAA00)
+        self.config_uuid = uuid_generator.get_uuid(0xAA02)
+        self.data_uuid = uuid_generator.get_uuid(0xAA01)
+        self.period_uuid = uuid_generator.get_uuid(0xAA03)
+
         ble_utility.Service.__init__(self, periph, uuid_generator,
                                      self.service_uuid, self.config_uuid,
                                      self.data_uuid, "temp")
@@ -29,12 +51,13 @@ class Temp(ble_utility.Service):
 
 class Humidity(ble_utility.Service):
     def __init__(self, periph):
-        uuid_generator = ble_utility.UUID("%08X-0451-4000-b000-000000000000",
-                                          0xF0000000)
-        self.service_uuid = 0xAA20
-        self.conf_uuid = 0xAA22
-        self.data_uuid = 0xAA21
-        self.period_uuid = 0XAA23
+        uuid_generator = ble_utility.TI_UUID()
+
+        self.service_uuid = uuid_generator.get_uuid(0xAA20)
+        self.conf_uuid = uuid_generator.get_uuid(0xAA22)
+        self.data_uuid = uuid_generator.get_uuid(0xAA21)
+        self.period_uuid = uuid_generator.get_uuid(0XAA23)
+
         ble_utility.Service.__init__(self, periph, uuid_generator,
                                      self.service_uuid, self.conf_uuid,
                                      self.data_uuid, "humidity")
@@ -51,12 +74,12 @@ class Humidity(ble_utility.Service):
 
 class Barometer(ble_utility.Service):
     def __init__(self, periph):
-        uuid_generator = ble_utility.UUID("%08X-0451-4000-b000-000000000000",
-                                          0xF0000000)
-        self.service_uuid = 0xAA40
-        self.conf_uuid = 0xAA42
-        self.data_uuid = 0xAA41
-        self.period_uuid = 0xAA44
+        uuid_generator = ble_utility.TI_UUID()
+
+        self.service_uuid = uuid_generator.get_uuid(0xAA40)
+        self.conf_uuid = uuid_generator.get_uuid(0xAA42)
+        self.data_uuid = uuid_generator.get_uuid(0xAA41)
+        self.period_uuid = uuid_generator.get_uuid(0xAA44)
 
         ble_utility.Service.__init__(self, periph, uuid_generator,
                                      self.service_uuid, self.conf_uuid,
@@ -70,3 +93,26 @@ class Barometer(ble_utility.Service):
 
     def set_probe_period(self, period):
         self.additional_characteristics["period"].write(period)
+
+class Lux(ble_utility.Service):
+    def __init__(self, periph):
+            uuid_generator = ble_utility.TI_UUID()
+
+            self.service_uuid = uuid_generator.get_uuid(0xAA70)
+            self.conf_uuid = uuid_generator.get_uuid(0xAA72)
+            self.data_uuid = uuid_generator.get_uuid(0xAA71)
+            self.period_uuid = uuid_generator.get_uuid(0xAA73)
+
+            ble_utility.Service.__init__(self, periph, uuid_generator,
+                                             self.service_uuid, self.conf_uuid,
+                                             self.data_uuid, "lux")
+            self.add_characteristics("period", self.period_uuid)
+
+    def read(self):
+        raw = struct.unpack('<h', self.data.read())[0]
+        m = raw & 0xFFF
+        e = (raw & 0xF000) >> 12
+        return 0.01 * (m << e)
+
+    def set_probe_period(self, period):
+           self.additional_characteristics["period"].write(period)

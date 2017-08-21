@@ -62,9 +62,18 @@ class BLEDevice(bluepy.btle.Peripheral):
 
 # Class to get valid UUIDs through the UUID class from bluepy
 class UUID:
-    def __init__(self, base, prefix):
-        self.base = base
-        self.prefix = prefix
+    def __init__(self):
+        self.base = "%08X-0451-4000-b000-000000000000"
+        self.prefix = 0xF0000000
+
+    def get_uuid(self, val):
+        return bluepy.btle.UUID(val)
+
+class TI_UUID:
+
+    def __init__(self):
+        self.base = "%08X-0451-4000-b000-000000000000"
+        self.prefix = 0xF0000000
 
     def get_uuid(self, val):
         return bluepy.btle.UUID(self.base % (self.prefix + val))
@@ -74,14 +83,14 @@ class Service:
     on = struct.pack("B", 0x01)
     off = struct.pack("B", 0x00)
 
-    def __init__(self, periph, uuid, service_uuid, conf_uuid, data_uuid,
+    def __init__(self, periph, uuid_generator, service_uuid, conf_uuid, data_uuid,
                  service_id):
 
         self.periph = periph
-        self.uuid_generator = uuid
-        self.service_uuid = uuid.get_uuid(service_uuid)
-        self.conf_uuid = uuid.get_uuid(conf_uuid)
-        self.data_uuid = uuid.get_uuid(data_uuid)
+        self.uuid_generator = uuid_generator
+        self.service_uuid =service_uuid
+        self.conf_uuid = conf_uuid
+        self.data_uuid = data_uuid
         self.service_id = service_id
         self.service = None
         self.config = None
@@ -100,12 +109,14 @@ class Service:
         if self.data is None:
             self.data = self.service.getCharacteristics(self.data_uuid)[0]
 
+        '''
         for key, uuid in self.additional_uuids.iteritems():
             if key not in self.additional_characteristics:
                 self.additional_characteristics[key] = \
-                    self.service.getCharacteristics(uuid)[0]
+                    self.service.getCharacteristics(uuid)[0] '''
 
         if self.on is not None:
+            print "switching on " + self.service_id
             self.config.write(self.on, withResponse=True)
 
     def deactivate(self):
@@ -117,7 +128,8 @@ class Service:
 
     def add_characteristics(self, char_id, uuid):
         if char_id not in self.additional_uuids:
-            self.additional_uuids[char_id] = self.uuid_generator.get_uuid(uuid)
+            # self.additional_uuids[char_id] = self.uuid_generator.get_uuid(uuid)
+             self.additional_uuids[char_id] = uuid
         else:
             raise BLEServiceDuplicatedUUID(char_id)
 

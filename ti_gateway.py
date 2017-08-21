@@ -17,6 +17,8 @@ class TIInterface(threading.Thread):
         self.sensortag.add_service("temperature", TI.Temp(self.sensortag))
         self.sensortag.add_service("humidity", TI.Humidity(self.sensortag))
         self.sensortag.add_service("barometer", TI.Barometer(self.sensortag))
+        self.sensortag.add_service("lux", TI.Lux(self.sensortag))
+        self.sensortag.add_service("battery", TI.Battery(self.sensortag))
         #for service in self.sensortag.services.itervalues():
         self.keys = self.sensortag.services.keys()
         print "keys : %s" % self.keys
@@ -33,15 +35,10 @@ class TIInterface(threading.Thread):
 
         for key in self.keys:
            value = str(self.sensortag.services[key].read())
-           print "Service with value : %s %s" % (key, value)
+           print "On TTI nitialize. Service with value : %s %s" % (key, value)
            self.prev_state[key] = value
-           self.update_queue.put({key: value})
+          # self.update_queue.put({key: value})
            ble_dict[key] = value
-
-        '''for s_id, service in self.sensortag.services.iteritems():
-            value = str(service.read())
-            self.prev_state[s_id] = value
-            self.update_queue.put({s_id: value})'''
 
     def set_logger(self, logger_name):
         self.sensortag.set_logger(logger_name)
@@ -62,27 +59,20 @@ class TIInterface(threading.Thread):
 
     def get_current_values(self):
         self.update = True
-
+        print "in get_current_values, before while true"
         while self.update:
-           # keys = self.sensortag.services.keys()
-            print "keys : %s" % self.keys
+            keys = self.sensortag.services.keys()
+            print "in loop ... values are : %s" % self.keys
             for key in self.keys:
                 cur_value = str(self.sensortag.services[key].read())
                 print "Service with value : %s %s" % (key, cur_value)
                 self.sensortag.logger.debug("Cur Value for %s: %s" % (key, cur_value))
                 if self.prev_state[key] != cur_value:
-                    self.update_queue.put({key: cur_value})
+                  #  self.update_queue.put({key: cur_value})
                     self.ble_dict[key] = cur_value
                 self.prev_state[key] = cur_value
-                self.update_queue.put({key: cur_value})
+               # self.update_queue.put({key: cur_value})
                 self.ble_dict[key] = cur_value
-
-            '''for s_id, service in self.sensortag.services.iteritems():
-                curr_value = str(service.read())
-                self.sensortag.logger.debug("Cur Value for %s: %s" %
-                                            (s_id, curr_value))
-                if self.prev_state[s_id] != curr_value:
-                    self.update_queue.put({s_id: curr_value})'''
 
             self.wait_for_notifications()
 
@@ -101,44 +91,11 @@ class MainThread():
                     logging.DEBUG)
         self.logger = logging.getLogger("TI_Gateway")
 
-        '''self.rest_switches = REST.OpenHabRestInterface(
-                "192.168.178.20", "8080", "pi", "raspberry",
-                "%s_device_switch_group" % self.prefix, self.switch_queue)
-            self.rest_switches.daemon = True  # REST classes can be daemonized
-            self.rest_switches.set_logger("TI_Gateway")
-            self.rest_values = REST.OpenHabRestInterface(
-                "192.168.178.20", "8080", "pi", "raspberry", "%s_values_group",
-                self.value_queue)
-            self.rest_values.daemon = True  # REST classes can be daemonized
-            self.rest_values.set_logger("TI_Gateway")'''
-
         self.sensortag = TIInterface("24:71:89:BC:1D:01", self.ble_queue, 1.0,
                                      self.update)
         self.sensortag.daemon = True
         self.sensortag.set_logger("TI_Gateway")
         self.sensortag.start()
-
-        # Create Switch items
-        '''self.rest_switches.add_item("%s_device_switch_group" % self.prefix,
-                                    "Group", "Group of Switches for %s" %
-                                    self.prefix, "rest", "")
-        self.rest_switches.add_item("%s_device_switch" % self.prefix, "Switch",
-                                    "Switch for %s" % self.prefix, "rest",
-                                    "%s_device_switch_group" % self.prefix)
-       self.rest_switches.update_item_state("%s_device_switch" % self.prefix,
-                                             "ON")
-
-        self.rest_switches.start() '''
-
-        # Create Value items
-        '''self.rest_values.add_item("%s_values_group" % self.prefix, "Group",
-                                  "Group of Values for %s" % self.prefix,
-                                  "rest", "")
-        for service_id in self.sensortag.get_service_ids():
-            print "Cur service_id is %s: " % service_id
-            self.rest_values.add_item("%s_%s" % (self.prefix, service_id),
-                                      "String", service_id, "rest",
-                                      "%s_values" % self.prefix)'''
 
     def run(self):
         while self.update:

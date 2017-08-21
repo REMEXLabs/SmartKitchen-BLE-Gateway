@@ -50,15 +50,19 @@ class RequestHandler(BaseHTTPRequestHandler):
         print "+++++++ incoming request --->  " + self.path
        # test = parse_qs(urlparse(self.path).query)
       #  akku = test['data']
+
         # print "akku  = " + akku
         # unquoting the query
         unquoted_query_components = parse_qs(urlparse(urllib.unquote(self.path)).query)
+       # print type(unquoted_query_components)
+       # print unquoted_query_components.get('data', 'none')
         if unquoted_query_components:
+            # print unquoted_query_components.get('data', 'none')
             if unquoted_query_components['data']:
-                print "unquoted_query_components['data'][0] = " + unquoted_query_components['data'][0]
+                # print "unquoted_query_components['data'][0] = " + unquoted_query_components['data'][0]
                 self.handel_get_data_request(unquoted_query_components)
-        # elif unquoted_query_components['action']:
-        #    self.handel_action_request(unquoted_query_components)
+            elif unquoted_query_components['action']:
+                self.handel_action_request(unquoted_query_components)
         return
 
     def handel_get_data_request(self, unquoted_query_components):
@@ -71,7 +75,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             # TODO: Refactor this part with proper JSON lib.
             self.wfile.write("{" +
                              "\"sensorData\": {" +
-                             "\"temprature\":" + "\"" + ble_dict["temperature"] + "\"," +
+                             "\"temperature\":" + "\"" + ble_dict["temperature"] + "\"," +
                              "\"humidity\":" + "\"" + ble_dict["humidity"] + "\"," +
                              "\"pressure\":" + "\"" + ble_dict["barometer"] + "\"" +
                              "}"
@@ -106,14 +110,16 @@ class BLE_Thread():
         self.sensortag.set_logger("TI_Gateway")
         self.sensortag.start()
 
-        thread = threading.Thread(target=self.run, args=())
-        thread.daemon = True                            # Daemonize thread
-        thread.start()                                  # Start the execution
+      #  thread = threading.Thread(target=self.run, args=())
+       # thread.daemon = True                            # Daemonize thread
+       # thread.start()                                  # Start the execution
 
     def run(self):
+        print "in ruunn 1"
         while self.update:
             time.sleep(0.2)
-
+          #  self.sensortag.get_current_values(self)
+            print "in self.update 1"
             while True:
                 try:
                     item = switch_queue.get(True, 0.5)
