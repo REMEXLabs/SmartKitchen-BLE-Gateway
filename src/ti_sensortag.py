@@ -1,6 +1,13 @@
 import ble_utility
-
 import struct
+
+'''
+Basic BLE implementation for the TI Sensortag CC2650
+'''
+
+'''
+Reading the battery status
+'''
 
 
 class Battery(ble_utility.Service):
@@ -12,7 +19,7 @@ class Battery(ble_utility.Service):
         self.config_uuid = None
         self.data_uuid = uuid_generator.get_uuid(0x2A19)
         self.period_uuid = None
-        self.on = None
+        self.on = None  # does not need to be switched on!
 
         ble_utility.Service.__init__(self, periph, uuid_generator, self.service_uuid,
                                  self.config_uuid,
@@ -22,6 +29,10 @@ class Battery(ble_utility.Service):
         # returns the battery level in percent
         val = ord(self.data.read())
         return val
+
+'''
+Reading the ambient temperature of the TI Sensortag CC2650
+'''
 
 
 class Temp(ble_utility.Service):
@@ -48,6 +59,10 @@ class Temp(ble_utility.Service):
     def set_probe_period(self, period):
         self.additional_characteristics["period"].write(period)
 
+'''
+Reading the humidity level
+'''
+
 
 class Humidity(ble_utility.Service):
     def __init__(self, periph):
@@ -71,6 +86,10 @@ class Humidity(ble_utility.Service):
     def set_probe_period(self, period):
         self.additional_characteristics["period"].write(period)
 
+'''
+Reading the barometer value 
+'''
+
 
 class Barometer(ble_utility.Service):
     def __init__(self, periph):
@@ -93,6 +112,11 @@ class Barometer(ble_utility.Service):
 
     def set_probe_period(self, period):
         self.additional_characteristics["period"].write(period)
+
+'''
+Reading the lightning value
+'''
+
 
 class Lux(ble_utility.Service):
     def __init__(self, periph):

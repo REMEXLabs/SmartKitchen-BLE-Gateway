@@ -30,11 +30,12 @@ class TIInterface(threading.Thread):
         time.sleep(1.0)
 
         for key in self.keys:
-           value = str(self.sensortag.services[key].read())
-           print "On TTI initialize. Service with value : %s %s" % (key, value)
-           self.prev_state[key] = value
-          # self.update_queue.put({key: value})
-           ble_dict[key] = value
+            value = str(self.sensortag.services[key].read())
+            print "On TTI initialize. Service with value : %s %s" % (key, value)
+            self.prev_state[key] = value
+            ble_dict[key] = value
+            # self.update_queue.put({key: value})
+
 
     def set_logger(self, logger_name):
         self.sensortag.set_logger(logger_name)
@@ -43,18 +44,19 @@ class TIInterface(threading.Thread):
         self.sensortag.disconnect()
         del (self.sensortag)
 
+    '''
     def get_service_ids(self):
         return self.keys #Returning the keys
         service_ids = []
         for s_id in self.sensortag.services.iterkeys():
             service_ids.append(s_id)
         return service_ids
+    '''
 
     def wait_for_notifications(self):
         self.sensortag.waitForNotifications(self.timeout)
 
     def get_current_values(self):
-        self.update = True
         while self.update:
             for key in self.keys:
                 cur_value = str(self.sensortag.services[key].read())

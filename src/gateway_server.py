@@ -34,7 +34,7 @@ class http_server:
             print 'Started httpserver on port ', self.PORT_NUMBER
 
             # Wait forever for incoming htto requests
-            BLE_Thread("BLE_Thread")
+            BLEDevice("BLE_Thread")
             server.serve_forever()
 
         except KeyboardInterrupt:
@@ -48,18 +48,9 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         print "+++++++ incoming request --->  " + self.path
-       # test = parse_qs(urlparse(self.path).query)
-      #  akku = test['data']
-
-        # print "akku  = " + akku
-        # unquoting the query
         unquoted_query_components = parse_qs(urlparse(urllib.unquote(self.path)).query)
-       # print type(unquoted_query_components)
-       # print unquoted_query_components.get('data', 'none')
         if unquoted_query_components:
-            # print unquoted_query_components.get('data', 'none')
             if unquoted_query_components['data']:
-                # print "unquoted_query_components['data'][0] = " + unquoted_query_components['data'][0]
                 self.handel_get_data_request(unquoted_query_components)
             elif unquoted_query_components['action']:
                 self.handel_action_request(unquoted_query_components)
@@ -95,66 +86,19 @@ class RequestHandler(BaseHTTPRequestHandler):
         return
 
 
-class BLE_Thread():
+class BLEDevice:
 
-    prefix = "ble_imp_test"
+    prefix = "BLE Device"
     update = True
 
-    def __init__(self, instance_id):
-
-        UTIL.Logger("TI_Gateway", "ti_gateway.log", logging.DEBUG,
-                    logging.DEBUG)
+    def __init__(self):
+        UTIL.Logger("TI_Gateway", "ti_gateway.log", logging.DEBUG, logging.DEBUG)
         self.logger = logging.getLogger("TI_Gateway")
+        self.ble_device = TIInterface("24:71:89:BC:1D:01", ble_queue, 1.0, self.update, ble_dict)
+        self.ble_device.daemon = True
+        self.ble_device.set_logger("TI_Gateway")
+        self.ble_device.start()
 
-        self.sensortag = TIInterface("24:71:89:BC:1D:01", ble_queue, 1.0,
-                                     self.update, ble_dict)
-        self.sensortag.daemon = True
-        self.sensortag.set_logger("TI_Gateway")
-        self.sensortag.start()
-
-       # thread = threading.Thread(target=self.run, args=())
-       # thread.daemon = True                            # Daemonize thread
-       # thread.start()                                  # Start the execution
-
-    def run(self):
-        print "in ruunn 1"
-        while self.update:
-            time.sleep(0.2)
-          #  self.sensortag.get_current_values(self)
-            print "in self.update 1"
-            while True:
-                try:
-                    item = switch_queue.get(True, 0.5)
-                    switch_queue.task_done()
-                    key, value = item.popitem()
-                    if value == "OFF":
-                        self.update = False
-                        break
-                except:
-                    break
-
-            while True:
-                try:
-                    item = ble_queue.get(True, 0.5)
-                    key, value = item.popitem()
-                    self.rest_values.update_item_state("%s_%s" % (self.prefix,
-                                                                  key),
-                                                       str(value))
-                    self.logger.debug("New State of %s: %s" %
-                                      (str(key), str(value)))
-                    ble_queue.task_done()
-                except:
-                    break
-
-        # Clean Up
-        self.logger.debug("Cleaning Up")
-
-        # Set Values to NULL
-        for service_id in self.sensortag.get_service_ids():
-            self.rest_values.update_item_state("%s_%s" % (self.prefix,
-                                                          service_id), "--")
-
-        self.sensortag.__del__()  # Stop Sensortag
 
 class main:
     def __init__(self):
