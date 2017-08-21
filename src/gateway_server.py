@@ -77,7 +77,9 @@ class RequestHandler(BaseHTTPRequestHandler):
                              "\"sensorData\": {" +
                              "\"temperature\":" + "\"" + ble_dict["temperature"] + "\"," +
                              "\"humidity\":" + "\"" + ble_dict["humidity"] + "\"," +
-                             "\"pressure\":" + "\"" + ble_dict["barometer"] + "\"" +
+                             "\"pressure\":" + "\"" + ble_dict["barometer"] + "\"," +
+                             "\"lux\":" + "\"" + ble_dict["lux"] + "\"," +
+                             "\"battery\":" + "\"" + ble_dict["battery"] + "\"" +
                              "}"
                              '}')
             self.wfile.close()
@@ -110,7 +112,7 @@ class BLE_Thread():
         self.sensortag.set_logger("TI_Gateway")
         self.sensortag.start()
 
-      #  thread = threading.Thread(target=self.run, args=())
+       # thread = threading.Thread(target=self.run, args=())
        # thread.daemon = True                            # Daemonize thread
        # thread.start()                                  # Start the execution
 

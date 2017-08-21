@@ -1,12 +1,8 @@
 import threading
 import time
-import Queue
-import logging
-
 import src.ble_utility as BLEU
-import src.rest_utility as REST
 import src.ti_sensortag as TI
-import src.utils as UTIL
+
 
 class TIInterface(threading.Thread):
     prev_state = {}
@@ -35,7 +31,7 @@ class TIInterface(threading.Thread):
 
         for key in self.keys:
            value = str(self.sensortag.services[key].read())
-           print "On TTI nitialize. Service with value : %s %s" % (key, value)
+           print "On TTI initialize. Service with value : %s %s" % (key, value)
            self.prev_state[key] = value
           # self.update_queue.put({key: value})
            ble_dict[key] = value
@@ -59,10 +55,7 @@ class TIInterface(threading.Thread):
 
     def get_current_values(self):
         self.update = True
-        print "in get_current_values, before while true"
         while self.update:
-            keys = self.sensortag.services.keys()
-            print "in loop ... values are : %s" % self.keys
             for key in self.keys:
                 cur_value = str(self.sensortag.services[key].read())
                 print "Service with value : %s %s" % (key, cur_value)
@@ -75,67 +68,3 @@ class TIInterface(threading.Thread):
                 self.ble_dict[key] = cur_value
 
             self.wait_for_notifications()
-
-
-class MainThread():
-
-    prefix = "ble_imp_test"
-    switch_queue = Queue.Queue(1)
-    value_queue = Queue.Queue()
-    ble_queue = Queue.Queue(3)
-    update = True
-
-    def __init__(self, instance_id):
-
-        UTIL.Logger("TI_Gateway", "ti_gateway.log", logging.DEBUG,
-                    logging.DEBUG)
-        self.logger = logging.getLogger("TI_Gateway")
-
-        self.sensortag = TIInterface("24:71:89:BC:1D:01", self.ble_queue, 1.0,
-                                     self.update)
-        self.sensortag.daemon = True
-        self.sensortag.set_logger("TI_Gateway")
-        self.sensortag.start()
-
-    def run(self):
-        while self.update:
-            time.sleep(0.2)
-
-            while True:
-                try:
-                    item = self.switch_queue.get(True, 0.5)
-                    self.switch_queue.task_done()
-                    key, value = item.popitem()
-                    if value == "OFF":
-                        self.update = False
-                        break
-                except:
-                    break
-
-            while True:
-                try:
-                    item = self.ble_queue.get(True, 0.5)
-                    key, value = item.popitem()
-                    self.rest_values.update_item_state("%s_%s" % (self.prefix,
-                                                                  key),
-                                                       str(value))
-                    self.logger.debug("New State of %s: %s" %
-                                      (str(key), str(value)))
-                    self.ble_queue.task_done()
-                except:
-                    break
-
-        # Clean Up
-        self.logger.debug("Cleaning Up")
-
-        # Set Values to NULL
-        for service_id in self.sensortag.get_service_ids():
-            self.rest_values.update_item_state("%s_%s" % (self.prefix,
-                                                          service_id), "--")
-
-        self.sensortag.__del__()  # Stop Sensortag
-
-
-if __name__ == "__main__":
-    main_thread = MainThread("ble_rest_test")
-    main_thread.run()
