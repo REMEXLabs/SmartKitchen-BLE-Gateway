@@ -33,8 +33,8 @@ class http_server:
             server = HTTPServer(('', self.PORT_NUMBER), self.Request_Handler)
             print 'Started httpserver on port ', self.PORT_NUMBER
 
-            # Wait forever for incoming htto requests
-            BLEDevice("BLE_Thread")
+            # Wait forver for incoming htto requests
+            self.device = BLEDevice()
             server.serve_forever()
 
         except KeyboardInterrupt:
@@ -50,9 +50,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         print "+++++++ incoming request --->  " + self.path
         unquoted_query_components = parse_qs(urlparse(urllib.unquote(self.path)).query)
         if unquoted_query_components:
-            if unquoted_query_components['data']:
-                self.handel_get_data_request(unquoted_query_components)
-            elif unquoted_query_components['action']:
+           # if unquoted_query_components['data']:
+            #    self.handel_get_data_request(unquoted_query_components)
+            if unquoted_query_components['action']:
                 self.handel_action_request(unquoted_query_components)
         return
 
@@ -83,10 +83,11 @@ class RequestHandler(BaseHTTPRequestHandler):
         return
 
     def handel_action_request(self, action):
+        self.device.services['io'].write(0x01)
         return
 
 
-class BLEDevice:
+class BLEDevice():
 
     prefix = "BLE Device"
     update = True

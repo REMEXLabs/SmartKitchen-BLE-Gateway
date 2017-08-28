@@ -4,6 +4,7 @@ import src.ble_utility as BLEU
 import src.ti_sensortag as TI
 
 
+
 class TIInterface(threading.Thread):
     prev_state = {}
 
@@ -15,6 +16,9 @@ class TIInterface(threading.Thread):
         self.sensortag.add_service("barometer", TI.Barometer(self.sensortag))
         self.sensortag.add_service("lux", TI.Lux(self.sensortag))
         self.sensortag.add_service("battery", TI.Battery(self.sensortag))
+        self.sensortag.add_service("vendor", TI.Vendor(self.sensortag))
+        self.sensortag.add_service("device", TI.Device(self.sensortag))
+        # self.sensortag.add_service("io", TI.IOService(self.sensortag))
         #for service in self.sensortag.services.itervalues():
         self.keys = self.sensortag.services.keys()
         print "keys : %s" % self.keys
@@ -70,3 +74,5 @@ class TIInterface(threading.Thread):
                 self.ble_dict[key] = cur_value
 
             self.wait_for_notifications()
+    def write(self):
+        self.self.sensortag.services['io'].write(0x01)

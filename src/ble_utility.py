@@ -136,3 +136,6 @@ class Service:
     def log_value(self, logger):
         logger.info("{service}: {value}".format(
             service=self.service_id, value=self.read()))
+
+    def write(self, data):
+        self.conf_uuid.write(data)

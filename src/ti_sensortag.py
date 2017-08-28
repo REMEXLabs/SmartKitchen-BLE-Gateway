@@ -6,6 +6,51 @@ Basic BLE implementation for the TI Sensortag CC2650
 '''
 
 '''
+Vendor & Device information
+'''
+
+class Vendor(ble_utility.Service):
+
+    def __init__(self, periph):
+        uuid_generator = ble_utility.UUID()
+
+        self.service_uuid = uuid_generator.get_uuid(0x180A)
+        self.config_uuid = None
+        self.data_uuid = uuid_generator.get_uuid(0x2A29)
+        self.period_uuid = None
+        self.on = None  # does not need to be switched on!
+
+        ble_utility.Service.__init__(self, periph, uuid_generator, self.service_uuid,
+                                 self.config_uuid,
+                                 self.data_uuid, "vendor")
+
+    def read(self):
+        # returns the vendor name as a string
+        val = self.data.read()
+        return val
+
+
+class Device(ble_utility.Service):
+
+    def __init__(self, periph):
+        uuid_generator = ble_utility.UUID()
+
+        self.service_uuid = uuid_generator.get_uuid(0x180A)
+        self.config_uuid = None
+        self.data_uuid = uuid_generator.get_uuid(0x2A24)
+        self.period_uuid = None
+        self.on = None  # does not need to be switched on!
+
+        ble_utility.Service.__init__(self, periph, uuid_generator, self.service_uuid,
+                                 self.config_uuid,
+                                 self.data_uuid, "device")
+
+    def read(self):
+        # returns device name - the model number string
+        val = self.data.read()
+        return val
+
+'''
 Reading the battery status
 '''
 
@@ -140,3 +185,29 @@ class Lux(ble_utility.Service):
 
     def set_probe_period(self, period):
            self.additional_characteristics["period"].write(period)
+
+
+'''
+IO Service
+'''
+
+class IOService(ble_utility.Service):
+    def __init__(self, periph):
+            uuid_generator = ble_utility.TI_UUID()
+
+            self.service_uuid = uuid_generator.get_uuid(0xAA64)
+            self.conf_uuid = uuid_generator.get_uuid(0xAA66)
+            self.data_uuid = uuid_generator.get_uuid(0xAA65)
+            self.on = None
+          #  self.period_uuid = uuid_generator.get_uuid(0xAA73)
+
+            ble_utility.Service.__init__(self, periph, uuid_generator,
+                                             self.service_uuid, self.conf_uuid,
+                                             self.data_uuid, "io")
+           # self.add_characteristics("period", self.period_uuid)
+
+    def read(self):
+       return 0
+
+    def write(self, data):
+        self.conf_uuid.write(data)
