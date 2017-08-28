@@ -50,9 +50,9 @@ class RequestHandler(BaseHTTPRequestHandler):
         print "+++++++ incoming request --->  " + self.path
         unquoted_query_components = parse_qs(urlparse(urllib.unquote(self.path)).query)
         if unquoted_query_components:
-           # if unquoted_query_components['data']:
-            #    self.handel_get_data_request(unquoted_query_components)
-            if unquoted_query_components['action']:
+            if unquoted_query_components['data']:
+                self.handel_get_data_request(unquoted_query_components)
+            elif unquoted_query_components['action']:
                 self.handel_action_request(unquoted_query_components)
         return
 
@@ -68,7 +68,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                              "\"sensorData\": {" +
                              "\"temperature\":" + "\"" + ble_dict["temperature"] + "\"," +
                              "\"humidity\":" + "\"" + ble_dict["humidity"] + "\"," +
-                             "\"pressure\":" + "\"" + ble_dict["barometer"] + "\"," +
+                             "\"barometer\":" + "\"" + ble_dict["barometer"] + "\"," +
                              "\"lux\":" + "\"" + ble_dict["lux"] + "\"," +
                              "\"battery\":" + "\"" + ble_dict["battery"] + "\"" +
                              "}"
@@ -76,10 +76,21 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.wfile.close()
         else:
             self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.end_headers()
+            # TODO: Refactor this part with proper JSON lib.
+            self.wfile.write("{" +
+                             "\"sensorData\": {" +
+                                "\""+_sensor_data_query+"\":" + "\"" + ble_dict[_sensor_data_query] + "\"" +
+                             "}"
+                             '}')
+            self.wfile.close()
+        '''else:
+            self.send_response(200)
             self.send_header('Content-type', 'plain/text')
             self.end_headers()
             self.wfile.write("no valid parameter")
-            self.wfile.close()
+            self.wfile.close()'''
         return
 
     def handel_action_request(self, action):
