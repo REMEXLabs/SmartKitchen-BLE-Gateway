@@ -1,8 +1,8 @@
 import threading
 import time
-import src.ble_utility as BLEU
-import src.ti_sensortag as TI
 
+import peripherals.TI.sensortag as TI
+import src.ble_utility as BLEU
 
 
 class TIInterface(threading.Thread):

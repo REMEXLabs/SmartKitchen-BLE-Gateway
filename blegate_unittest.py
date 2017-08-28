@@ -3,9 +3,9 @@ import struct
 import time
 import unittest
 
+import peripherals.TI.sensortag as TI
 import src.ble_utility as BLEU
 import src.rest_utility as REST
-import src.ti_sensortag as TI
 
 
 class BLETest(unittest.TestCase):
