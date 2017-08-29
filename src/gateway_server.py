@@ -3,6 +3,7 @@
 import urlparse
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from ti_gateway import TIInterface
+from src.EGOInterface import EGOInterface
 import time
 import Queue
 import logging
@@ -106,7 +107,8 @@ class BLEDevice():
     def __init__(self):
         UTIL.Logger("TI_Gateway", "ti_gateway.log", logging.DEBUG, logging.DEBUG)
         self.logger = logging.getLogger("TI_Gateway")
-        self.ble_device = TIInterface("24:71:89:BC:1D:01", ble_queue, 1.0, self.update, ble_dict)
+        # self.ble_device = TIInterface("24:71:89:BC:1D:01", ble_queue, 1.0, self.update, ble_dict)
+        self.ble_device = EGOInterface("38:b5:bd:45:67:89", ble_queue, 1.0, self.update, ble_dict)
         self.ble_device.daemon = True
         self.ble_device.set_logger("TI_Gateway")
         self.ble_device.start()

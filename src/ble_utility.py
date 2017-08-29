@@ -32,6 +32,7 @@ class BLEServiceDuplicatedUUID(Exception):
 # BLEDevice contains services which can be used
 class BLEDevice(bluepy.btle.Peripheral):
     def __init__(self, address):
+        print "BLE Device" +address
         # NULL Logger
         self.logger = logging.getLogger("NULL")
         self.logger.addHandler(logging.NullHandler())
@@ -40,7 +41,7 @@ class BLEDevice(bluepy.btle.Peripheral):
         # Init Device
         self.logger.debug("{msg}{mac}".format(
             msg="Connecting to ", mac=address))
-        bluepy.btle.Peripheral.__init__(self, address)
+        bluepy.btle.Peripheral.__init__(self, address,bluepy.btle.ADDR_TYPE_PUBLIC)
         self.discoverServices()
         self.services = {}  # all registerd services should be in this list
 
