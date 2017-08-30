@@ -79,6 +79,15 @@ class TI_UUID:
     def get_uuid(self, val):
         return bluepy.btle.UUID(self.base % (self.prefix + val))
 
+class EGO_UUID:
+    def __init__(self):
+       # self.base = "%08X-0451-4000-b000-000000000000"
+        self.base = "%08X-26dd-913f-4b8f-ee97799e304f"
+        self.prefix = 0x8520
+
+    def get_uuid(self, val):
+       return bluepy.btle.UUID(self.base % (self.prefix + val))
+
 
 class Service:
     on = struct.pack("B", 0x01)

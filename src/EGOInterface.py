@@ -13,6 +13,7 @@ class EGOInterface(threading.Thread):
         self.cooktop = BLEU.BLEDevice(address)
         self.cooktop.add_service("vendor", ego.Vendor(self.cooktop))
         self.cooktop.add_service("device", ego.Device(self.cooktop))
+        self.cooktop.add_service("status", ego.Status(self.cooktop))
         # self.sensortag.add_service("io", TI.IOService(self.sensortag))
         #for service in self.sensortag.services.itervalues():
         self.keys = self.cooktop.services.keys()
@@ -69,5 +70,3 @@ class EGOInterface(threading.Thread):
                 self.ble_dict[key] = cur_value
 
             self.wait_for_notifications()
-    def write(self):
-        self.self.cooktop.services['io'].write(0x01)
