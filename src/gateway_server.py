@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 import urlparse
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
-from ti_gateway import TIInterface
+# from ti_gateway import TIInterface
 from src.EGOInterface import EGOInterface
 import time
 import Queue
